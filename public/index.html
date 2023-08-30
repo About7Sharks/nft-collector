@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>NFT Media Viewer</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.15/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        background-color: #1a202c;
+      }
+    </style>
+  </head>
+  <body class="text-white">
+    <div class="container mx-auto p-4">
+      <h1 class="text-4xl mb-4 text-center">NFT Media</h1>
+      <div class="text-center">
+        <select
+          id="account-selector"
+          class="mb-4 mx-auto bg-gray-800 text-white rounded w-1/4"
+        >
+          <option value="all">All Accounts</option>
+          <!-- Account options will be appended here -->
+        </select>
+      </div>
+      <div id="media-container" class="grid grid-cols-3 gap-4">
+        <!-- NFT images will be appended here -->
+      </div>
+    </div>
+    <!-- Add this block somewhere in your HTML body -->
+    <div
+      id="metadata-modal"
+      class="fixed inset-0 hidden bg-black bg-opacity-75 flex items-center justify-center"
+    >
+      <div class="bg-grey rounded p-4 w-1/2">
+        <button id="close-modal" class="float-right">X</button>
+        <h2>Metadata</h2>
+        <div id="metadata-content">
+          <!-- Metadata will be populated here -->
+        </div>
+      </div>
+    </div>
+
+    <style>
+      /* Add a hover effect for the images */
+      img {
+        border-radius: 10px;
+        cursor: pointer;
+      }
+      #media-container img:hover {
+        transform: scale(1.05);
+        transition: transform 0.3s ease-in-out;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      /* Custom styles for modal */
+      #metadata-modal {
+        z-index: 1000; /* Make sure the modal is on top */
+        transition: opacity 0.3s ease; /* Smooth fade-in effect */
+      }
+
+      #metadata-content {
+        max-height: 300px;
+        overflow-y: auto; /* Scrollable if the content is too tall */
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin-top: 10px;
+      }
+
+      /* Close button styling */
+      #close-modal {
+        cursor: pointer;
+        background-color: #ccc;
+        border: none;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        text-align: center;
+        line-height: 24px;
+        font-size: 16px;
+      }
+
+      /* Modal content */
+      .bg-grey {
+        background-color: #564e4e8e;
+        padding: 2em;
+        border-radius: 8px;
+        width: 80%;
+        max-width: 600px; /* You can adjust this value */
+      }
+    </style>
+
+    <script>
+      // Function to display NFT media
+      const displayMedia = async () => {
+        const mediaContainer = document.getElementById("media-container");
+        const accountSelector = document.getElementById("account-selector");
+        const response = await fetch("/mediaData");
+        const mediaData = await response.json();
+
+        // Populate account dropdown with unique account addresses
+        const uniqueAccounts = mediaData.reduce((acc, item) => {
+          if (!acc.some((account) => account.accountId === item.accountId)) {
+            acc.push({
+              accountAddress: item.accountAddress,
+              accountId: item.accountId,
+            });
+          }
+          return acc;
+        }, []);
+        uniqueAccounts.forEach(({ accountAddress, accountId }) => {
+          const option = document.createElement("option");
+          option.value = accountId;
+          option.textContent = `Account ${accountAddress}`;
+          accountSelector.appendChild(option);
+        });
+
+        // Function to render media
+        const renderMedia = (filteredData) => {
+          mediaContainer.innerHTML = ""; // Clear existing media
+          if (filteredData.length === 0) {
+            const emptyMessage = document.createElement("div");
+            emptyMessage.textContent = "No NFT media available.";
+            emptyMessage.className = "text-lg text-center text-gray-500";
+            mediaContainer.appendChild(emptyMessage);
+          } else {
+            filteredData.forEach(({ media, contractMetadata }) => {
+              if (
+                media &&
+                media.length > 0 &&
+                media[0].gateway &&
+                media[0].gateway !== ""
+              ) {
+                const imgElement = document.createElement("img");
+                imgElement.src = media[0].gateway;
+                imgElement.alt = "NFT Media";
+                imgElement.className =
+                  "w-full h-48 object-cover cursor-pointer"; // Added cursor-pointer class
+                imgElement.addEventListener("click", () => {
+                  // Populate modal content
+                  const metadataContent =
+                    document.getElementById("metadata-content");
+                  metadataContent.innerHTML = JSON.stringify(
+                    contractMetadata,
+                    null,
+                    2
+                  );
+
+                  // Show modal
+                  const metadataModal =
+                    document.getElementById("metadata-modal");
+                  metadataModal.classList.remove("hidden");
+
+                  // Close modal
+                  const closeModalButton =
+                    document.getElementById("close-modal");
+                  closeModalButton.addEventListener("click", () => {
+                    metadataModal.classList.add("hidden");
+                  });
+                });
+                mediaContainer.appendChild(imgElement);
+              }
+            });
+          }
+        };
+
+        // Initial render
+        renderMedia(mediaData);
+
+        // Update media display when account is selected
+        accountSelector.addEventListener("change", (event) => {
+          const selectedAccount = event.target.value;
+          const filteredData = mediaData.filter(
+            (item) =>
+              item.accountId == selectedAccount || selectedAccount === "all"
+          );
+          renderMedia(filteredData);
+        });
+      };
+
+      // Initialize and display NFT media
+      displayMedia();
+    </script>
+  </body>
+</html>
