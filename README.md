@@ -2,7 +2,6 @@
 
 ```
 echo "APIKEY=key" > .env
-```
 npm install
 ```
 
